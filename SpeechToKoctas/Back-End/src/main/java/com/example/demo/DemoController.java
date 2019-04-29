@@ -19,29 +19,36 @@ import com.google.cloud.speech.v1.SpeechRecognitionResult;
 import com.google.cloud.speech.v1.RecognitionConfig.AudioEncoding;
 import com.google.protobuf.ByteString;
 
+import org.apache.log4j.Logger;
+
 @RestController
 public class DemoController {
 
+	final static Logger logger = Logger.getLogger(DemoController.class);
+	
 	@RequestMapping(value="/uploadVoice",method = RequestMethod.POST)
-    public @ResponseBody String uploadVoice(@RequestParam("file") MultipartFile multipartFile) throws IOException
+    public @ResponseBody String uploadVoice(@RequestParam("data") String multipartFile) throws IOException
     {
-		byte[] data = multipartFile.getBytes();
-    	System.out.println(data.length+"");
-	    try (SpeechClient speechClient = SpeechClient.create()) {
+		String text = "";
+	    try {
+	    	byte[] data = org.apache.commons.codec.binary.Base64.decodeBase64(multipartFile .getBytes());
+	    	SpeechClient speechClient = SpeechClient.create();
 			ByteString audioBytes = ByteString.copyFrom(data);
-			RecognitionConfig config = RecognitionConfig.newBuilder().setEncoding(AudioEncoding.LINEAR16)
-					.setSampleRateHertz(16000).setLanguageCode("tr-TR").build();
+			RecognitionConfig config = RecognitionConfig.newBuilder().setEncoding(AudioEncoding.LINEAR16).setSampleRateHertz(48000).setLanguageCode("tr-TR").build();
 			RecognitionAudio audio = RecognitionAudio.newBuilder().setContent(audioBytes).build();
 			RecognizeResponse response = speechClient.recognize(config, audio);
 			List<SpeechRecognitionResult> results = response.getResultsList();
 
 			for (SpeechRecognitionResult result : results) {
 				SpeechRecognitionAlternative alternative = result.getAlternativesList().get(0);
-				System.out.printf("Transcription: %s%n", alternative.getTranscript());
+				text += alternative.getTranscript();
 			}
+		} catch(Exception ex) {
+			logger.error(ex.getMessage());
 		}
-	    return "file uploaded";
-
+	    
+	    logger.info("Success:\t" + text.length());
+	    return text;
     }
-
 }
+
