@@ -3,13 +3,13 @@ package com.example.demo;
 import java.io.IOException;
 import java.util.List;
 
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.multipart.MultipartFile;
-
 import com.google.cloud.speech.v1.RecognitionAudio;
 import com.google.cloud.speech.v1.RecognitionConfig;
 import com.google.cloud.speech.v1.RecognizeResponse;
@@ -27,7 +27,7 @@ public class DemoController {
 	final static Logger logger = Logger.getLogger(DemoController.class);
 	
 	@RequestMapping(value="/uploadVoice",method = RequestMethod.POST)
-    public @ResponseBody String uploadVoice(@RequestParam("data") String multipartFile) throws IOException
+    public @ResponseBody ResponseEntity<Object> uploadVoice(@RequestParam("data") String multipartFile) throws IOException
     {
 		String text = "";
 	    try {
@@ -48,7 +48,7 @@ public class DemoController {
 		}
 	    
 	    logger.info("Success:\t" + text.length());
-	    return text;
+	    return new ResponseEntity<Object>(new ResponseText(text), HttpStatus.OK);
     }
 }
 
