@@ -27,14 +27,13 @@ public class DemoController {
 	final static Logger logger = Logger.getLogger(DemoController.class);
 	
 	@RequestMapping(value="/uploadVoice",method = RequestMethod.POST)
-    public @ResponseBody ResponseEntity<Object> uploadVoice(@RequestParam("data") String multipartFile) throws IOException
-    {
+    public @ResponseBody ResponseEntity<Object> uploadVoice(@RequestParam("data") String multipartFile) throws IOException {
 		String text = "";
 	    try {
-	    	byte[] data = org.apache.commons.codec.binary.Base64.decodeBase64(multipartFile .getBytes());
+	    	byte[] data = org.apache.commons.codec.binary.Base64.decodeBase64(multipartFile.getBytes());
 	    	SpeechClient speechClient = SpeechClient.create();
 			ByteString audioBytes = ByteString.copyFrom(data);
-			RecognitionConfig config = RecognitionConfig.newBuilder().setEncoding(AudioEncoding.LINEAR16).setSampleRateHertz(48000).setLanguageCode("tr-TR").build();
+			RecognitionConfig config = RecognitionConfig.newBuilder().setEncoding(AudioEncoding.LINEAR16).setSampleRateHertz(44100).setLanguageCode("tr-TR").build();
 			RecognitionAudio audio = RecognitionAudio.newBuilder().setContent(audioBytes).build();
 			RecognizeResponse response = speechClient.recognize(config, audio);
 			List<SpeechRecognitionResult> results = response.getResultsList();
@@ -45,10 +44,22 @@ public class DemoController {
 			}
 		} catch(Exception ex) {
 			logger.error(ex.getMessage());
+			return new ResponseEntity<Object>(new ResponseText(""), HttpStatus.INTERNAL_SERVER_ERROR);
 		}
 	    
+	    //text = org.apache.commons.codec.binary.Base64.encodeBase64String(text.getBytes("ISO-8859-9"));
 	    logger.info("Success:\t" + text.length());
 	    return new ResponseEntity<Object>(new ResponseText(text), HttpStatus.OK);
+    }
+	
+	@RequestMapping(value="/",method = RequestMethod.GET)
+    public @ResponseBody ResponseEntity<Object> hellotest1() throws IOException {
+		return new ResponseEntity<Object>(new ResponseText("hello world."), HttpStatus.OK);
+    }
+	
+	@RequestMapping(value="/hello",method = RequestMethod.GET)
+    public @ResponseBody ResponseEntity<Object> hellotest2() throws IOException {
+		return new ResponseEntity<Object>(new ResponseText("hello world.."), HttpStatus.OK);
     }
 }
 
