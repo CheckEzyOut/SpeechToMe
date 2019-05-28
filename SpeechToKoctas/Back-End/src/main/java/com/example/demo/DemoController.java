@@ -29,26 +29,23 @@ public class DemoController {
 	@RequestMapping(value="/uploadVoice",method = RequestMethod.POST)
     public @ResponseBody ResponseEntity<Object> uploadVoice(@RequestParam("data") String multipartFile) throws IOException {
 		String text = "";
+		String transactionId = String.valueOf(multipartFile.length() % 999);
+		logger.info(transactionId + ": UploadVoice begin");
 	    try {
-	    	byte[] data = org.apache.commons.codec.binary.Base64.decodeBase64(multipartFile.getBytes());
-	    	SpeechClient speechClient = SpeechClient.create();
-			ByteString audioBytes = ByteString.copyFrom(data);
-			RecognitionConfig config = RecognitionConfig.newBuilder().setEncoding(AudioEncoding.LINEAR16).setSampleRateHertz(44100).setLanguageCode("tr-TR").build();
-			RecognitionAudio audio = RecognitionAudio.newBuilder().setContent(audioBytes).build();
-			RecognizeResponse response = speechClient.recognize(config, audio);
-			List<SpeechRecognitionResult> results = response.getResultsList();
-
-			for (SpeechRecognitionResult result : results) {
-				SpeechRecognitionAlternative alternative = result.getAlternativesList().get(0);
-				text += alternative.getTranscript();
-			}
+	    	text = execute(multipartFile, 44100);
+	    	logger.info(transactionId + ": 44100 is ok");
 		} catch(Exception ex) {
-			logger.error(ex.getMessage());
-			return new ResponseEntity<Object>(new ResponseText(""), HttpStatus.INTERNAL_SERVER_ERROR);
+			try {
+				logger.error(transactionId + ": Default hertz incompatible. Calculating hertz again: " + ex.getMessage());
+				int hertz = handleHertzErrorParser(ex.getMessage());
+				text = execute(multipartFile, hertz);
+				logger.info(transactionId + ": "+String.valueOf(hertz)+" is ok");
+			} catch (Exception e) {
+				logger.error(transactionId + ": Calculated hertz incompatible. Returning String.EMPTY: " + ex.getMessage());
+				text = "";
+			}
 		}
-	    
-	    //text = org.apache.commons.codec.binary.Base64.encodeBase64String(text.getBytes("ISO-8859-9"));
-	    logger.info("Success:\t" + text.length());
+	    logger.info(transactionId + ": Succeeded with[" + text + "]");
 	    return new ResponseEntity<Object>(new ResponseText(text), HttpStatus.OK);
     }
 	
@@ -61,5 +58,32 @@ public class DemoController {
     public @ResponseBody ResponseEntity<Object> hellotest2() throws IOException {
 		return new ResponseEntity<Object>(new ResponseText("hello world.."), HttpStatus.OK);
     }
+	
+	private String execute(String multipartFile, int hertz) throws IOException, Exception {
+		String text = "";
+		byte[] data = org.apache.commons.codec.binary.Base64.decodeBase64(multipartFile.getBytes());
+    	SpeechClient speechClient = SpeechClient.create();
+		ByteString audioBytes = ByteString.copyFrom(data);
+		RecognitionConfig config = RecognitionConfig.newBuilder().setEncoding(AudioEncoding.LINEAR16).setSampleRateHertz(hertz).setLanguageCode("tr-TR").build();
+		RecognitionAudio audio = RecognitionAudio.newBuilder().setContent(audioBytes).build();
+		RecognizeResponse response = speechClient.recognize(config, audio);
+		List<SpeechRecognitionResult> results = response.getResultsList();
+
+		for (SpeechRecognitionResult result : results) {
+			SpeechRecognitionAlternative alternative = result.getAlternativesList().get(0);
+			text += alternative.getTranscript();
+		}
+		return text;
+	}
+	
+	private int handleHertzErrorParser(String hertz) {
+		int handledHertz = 48000;
+		try {
+			handledHertz = Integer.parseInt(hertz.substring(hertz.length() - 8).replace("(", "").replaceAll(")", "").replaceAll(".", "").trim());
+		} catch (Exception ex) {
+			handledHertz = 48000;
+		}
+		return handledHertz;
+	}
 }
 
